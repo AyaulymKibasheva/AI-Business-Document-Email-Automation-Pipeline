@@ -23,6 +23,7 @@ from app.database import (
     list_documents,
 )
 from app.main import process_document
+from app.observability import configure_logging
 from app.parser import SUPPORTED_EXTENSIONS
 
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
@@ -83,6 +84,7 @@ def create_app(
 ) -> FastAPI:
     """Build the API with injectable dependencies for integration tests."""
 
+    configure_logging()
     database = engine or _engine_from_environment()
     initialize_database(database)
     app = FastAPI(

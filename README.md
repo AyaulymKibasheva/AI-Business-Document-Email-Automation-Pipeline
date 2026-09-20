@@ -39,6 +39,8 @@ tests/        Automated tests
   routing (stage 15)
 - FastAPI upload, document retrieval, review queue, and approval endpoints
   (stage 16)
+- Rotating application logs and bounded exponential retries for transient local
+  AI failures, with per-document batch isolation (stage 17)
 
 ## Run
 
@@ -145,6 +147,15 @@ POST /documents/{id}/approve
 `POST /documents` accepts multipart field `file`, rejects unsupported files and
 uploads larger than 20 MB, checks duplicates before AI processing, and returns
 the stored status for n8n routing.
+
+### Logs and retries
+
+Runtime events and final errors are written to UTF-8 `logs/app.log`. The log
+rotates at 5 MB and keeps three backups. Temporary Ollama request failures are
+retried three times with exponential delays (`1s`, `2s`) by default. Configure
+this with `AI_MAX_ATTEMPTS` and `AI_RETRY_BASE_SECONDS`. Empty or invalid model
+output is treated as a data error and is not retried. A failed document remains
+isolated and does not stop the rest of a batch.
 
 Example output:
 

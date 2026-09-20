@@ -3,6 +3,7 @@
 import logging
 from pathlib import Path
 
+from app.observability import configure_logging
 from app.parser import DocumentType, UploadedDocument
 
 LOGGER = logging.getLogger(__name__)
@@ -10,28 +11,6 @@ LOGGER = logging.getLogger(__name__)
 
 class TextExtractionError(RuntimeError):
     """Raised when readable text cannot be extracted from a document."""
-
-
-def configure_logging(log_path: str | Path = "logs/app.log") -> None:
-    """Configure the application file log once."""
-
-    path = Path(log_path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-
-    resolved_path = path.resolve()
-    if any(
-        isinstance(handler, logging.FileHandler)
-        and Path(handler.baseFilename) == resolved_path
-        for handler in LOGGER.handlers
-    ):
-        return
-
-    handler = logging.FileHandler(resolved_path, encoding="utf-8")
-    handler.setFormatter(
-        logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s")
-    )
-    LOGGER.addHandler(handler)
-    LOGGER.setLevel(logging.INFO)
 
 
 def _extract_pdf(path: Path) -> str:

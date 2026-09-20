@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from ollama import Client
 from pydantic import BaseModel
 
+from app.observability import retry_call
+
 DEFAULT_MODEL = "qwen2.5:3b"
 DEFAULT_HOST = "http://localhost:11434"
 
@@ -34,14 +36,21 @@ def generate_structured(
     )
 
     try:
-        response = selected_client.chat(
-            model=selected_model,
-            messages=[
-                {"role": "system", "content": instructions},
-                {"role": "user", "content": text},
-            ],
-            format=schema.model_json_schema(),
-            options={"temperature": 0},
+        attempts = int(os.getenv("AI_MAX_ATTEMPTS", "3"))
+        base_delay = float(os.getenv("AI_RETRY_BASE_SECONDS", "1"))
+        response = retry_call(
+            lambda: selected_client.chat(
+                model=selected_model,
+                messages=[
+                    {"role": "system", "content": instructions},
+                    {"role": "user", "content": text},
+                ],
+                format=schema.model_json_schema(),
+                options={"temperature": 0},
+            ),
+            attempts=attempts,
+            base_delay_seconds=base_delay,
+            operation_name=f"Ollama model {selected_model}",
         )
         content = response.message.content
         if not content:

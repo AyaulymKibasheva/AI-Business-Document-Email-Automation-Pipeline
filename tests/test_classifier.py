@@ -3,6 +3,7 @@
 import unittest
 from types import SimpleNamespace
 from unittest.mock import ANY, Mock
+from unittest.mock import patch
 
 from app.classifier import (
     ClassificationError,
@@ -56,6 +57,24 @@ class ClassifyDocumentTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ClassificationError, "empty response"):
             classify_document("Some document", client=client)
+
+        client.chat.assert_called_once()
+
+    def test_retries_transient_model_failure(self) -> None:
+        expected = DocumentClassification(document_type=DocumentCategory.INVOICE)
+        client = Mock()
+        client.chat.side_effect = [
+            ConnectionError("temporary"),
+            SimpleNamespace(message=SimpleNamespace(content=expected.model_dump_json())),
+        ]
+
+        with patch.dict(
+            "os.environ", {"AI_MAX_ATTEMPTS": "2", "AI_RETRY_BASE_SECONDS": "0"}
+        ):
+            result = classify_document("Invoice INV-17", client=client)
+
+        self.assertEqual(result, expected)
+        self.assertEqual(client.chat.call_count, 2)
 
 
 if __name__ == "__main__":

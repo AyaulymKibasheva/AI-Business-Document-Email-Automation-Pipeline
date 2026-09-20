@@ -1,6 +1,7 @@
 """Command-line entry point for manual document uploads."""
 
 import argparse
+import logging
 import sys
 from collections.abc import Sequence
 from datetime import datetime, timezone
@@ -29,6 +30,7 @@ from app.notifier import (
     NotificationError,
     send_email_notification,
 )
+from app.observability import configure_logging
 from app.status import ProcessingDecision, assess_invoice, failed, processed
 from app.sheets_writer import (
     GoogleSheetsConfig,
@@ -41,6 +43,8 @@ from app.validator import (
     validate_invoice_business_rules,
     validate_invoice_schema,
 )
+
+LOGGER = logging.getLogger(__name__)
 
 
 def configure_console_output() -> None:
@@ -149,10 +153,12 @@ def process_document(file_path: str | Path) -> int:
     """Process one document and return 0, 1, or 2 for its final status."""
 
     started_at = datetime.now(timezone.utc)
+    LOGGER.info("Processing started: %s", file_path)
 
     try:
         document = receive_document(file_path)
     except (FileNotFoundError, ValueError) as error:
+        LOGGER.exception("Document intake failed: %s", file_path)
         print(f"Error: {error}")
         print_decision(failed(str(error)))
         return 1
@@ -170,6 +176,7 @@ def process_document(file_path: str | Path) -> int:
             initialize_database(engine)
             duplicate_id = find_duplicate_document(engine, file_hash=file_hash)
             if duplicate_id is not None:
+                LOGGER.info("Duplicate document: %s existing_id=%s", document.filename, duplicate_id)
                 print(f"Duplicate document detected (existing id: {duplicate_id})")
                 return 0
         except Exception as error:
@@ -179,6 +186,7 @@ def process_document(file_path: str | Path) -> int:
     try:
         text = extract_text(document)
     except TextExtractionError as error:
+        LOGGER.exception("Text extraction stage failed: %s", document.filename)
         print(f"Error: {error}")
         decision = failed(str(error))
         print_decision(decision)
@@ -200,6 +208,7 @@ def process_document(file_path: str | Path) -> int:
     try:
         classification = classify_document(text)
     except ClassificationError as error:
+        LOGGER.exception("Classification stage failed: %s", document.filename)
         print(f"Error: {error}")
         decision = failed(str(error))
         print_decision(decision)
@@ -221,6 +230,7 @@ def process_document(file_path: str | Path) -> int:
         try:
             invoice = extract_invoice_data(text)
         except DataExtractionError as error:
+            LOGGER.exception("Data extraction stage failed: %s", document.filename)
             print(f"Error: {error}")
             decision = failed(str(error))
             print_decision(decision)
@@ -312,6 +322,7 @@ def process_document(file_path: str | Path) -> int:
             stage="complete",
         ):
             return 1
+    LOGGER.info("Processing completed: %s status=%s", document.filename, decision.status.value)
     return 0
 
 
@@ -348,6 +359,7 @@ def process_documents(documents: Sequence[Path], *, source: str = "Batch") -> in
         except Exception as error:
             # A defensive boundary keeps unexpected failures isolated per file.
             print(f"Unexpected error: {error}")
+            LOGGER.exception("Unexpected batch error for %s", path)
             result = 1
 
         if result == 0:
@@ -383,6 +395,7 @@ def process_email() -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    configure_logging()
     configure_console_output()
     args = build_parser().parse_args(argv)
     if args.email:
