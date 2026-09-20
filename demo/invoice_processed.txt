@@ -1,0 +1,12 @@
+INVOICE
+
+Invoice number: DEMO-2026-001
+Company: Blue Sky Business Ltd
+Invoice date: 2026-09-20
+Due date: 2026-10-20
+Currency: USD
+Subtotal: 1000.00
+Tax: 120.00
+Total: 1120.00
+Contact email: billing@bluesky.example
+

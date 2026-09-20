@@ -1,0 +1,12 @@
+INVOICE
+
+Company: Review Example Ltd
+Invoice date: 2026-09-20
+Currency: USD
+Subtotal: 500.00
+Tax: 60.00
+Total: 800.00
+Contact email: accounts@review.example
+
+The invoice number is missing and the total does not equal subtotal plus tax.
+

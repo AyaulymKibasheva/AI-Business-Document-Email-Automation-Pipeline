@@ -45,6 +45,8 @@ tests/        Automated tests
   volumes and health-based startup ordering (stage 18)
 - Blue Streamlit operations dashboard with metrics, status filtering, recent
   documents, and a manual-review approval queue (stage 19)
+- Reproducible final workflow demonstration with successful and manual-review
+  invoice examples plus an automatic duplicate check (stage 20)
 
 ## Run
 
@@ -199,6 +201,39 @@ documents, and manual approval controls. To run it without Docker:
 
 ```bash
 streamlit run app/dashboard.py
+```
+
+### Final demonstration
+
+Start the Docker Compose stack and make sure Ollama is running on Windows. Then
+run the complete happy-path demo from the project directory:
+
+```bash
+python -m scripts.demo_workflow
+```
+
+The command checks FastAPI health, uploads `demo/invoice_processed.txt`, waits
+for classification, extraction, validation, and MySQL persistence, then uploads
+the same document again to prove duplicate detection. Open
+`http://localhost:8501` to show the saved result in the dashboard. If Google
+Sheets and Gmail settings are present, the normal pipeline also appends the row
+and sends the configured notification.
+
+To demonstrate the manual-review route, use:
+
+```bash
+python -m scripts.demo_workflow --file demo/invoice_needs_review.txt --skip-duplicate-check
+```
+
+That example intentionally omits the invoice number and contains an incorrect
+total. It should appear in the dashboard's manual review queue, where it can be
+approved by a person.
+
+Final presentation flow:
+
+```text
+Gmail attachment → n8n → FastAPI → local Ollama AI → Pydantic/business rules
+→ duplicate detection → MySQL → Google Sheets → Gmail notification → dashboard
 ```
 
 Example output:
