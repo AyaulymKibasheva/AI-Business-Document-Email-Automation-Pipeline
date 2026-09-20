@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Runtime files
+data/*
+!data/.gitkeep
+logs/*
+!logs/.gitkeep
+
+# Local secrets (the current placeholder is safe; add real values locally only)
+.env.local
