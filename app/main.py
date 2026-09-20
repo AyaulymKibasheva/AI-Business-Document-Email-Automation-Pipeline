@@ -3,6 +3,7 @@
 import argparse
 from collections.abc import Sequence
 
+from app.extractor import TextExtractionError, extract_text
 from app.parser import receive_document
 
 
@@ -26,6 +27,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(document.filename)
     print(f"-> {document.document_type.value} detected")
     print("-> ready for processing")
+
+    try:
+        text = extract_text(document)
+    except TextExtractionError as error:
+        print(f"Error: {error}")
+        return 1
+
+    print("-> text extracted")
+    print("\nDocument text:\n")
+    print(text)
     return 0
 
 
