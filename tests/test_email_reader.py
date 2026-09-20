@@ -33,6 +33,16 @@ class FakeImapClient:
         self.calls.append(("logout",))
 
 
+class ManyMessagesFakeImapClient(FakeImapClient):
+    def uid(self, command: str, *args):
+        self.calls.append(("uid", command, *args))
+        if command == "search":
+            return "OK", [b"1 2 3 4"]
+        if command == "fetch":
+            return "OK", [(b"message (RFC822)", self.raw_message)]
+        return "OK", []
+
+
 class EmailReaderTests(unittest.TestCase):
     def _message(self) -> bytes:
         message = EmailMessage()
@@ -92,6 +102,29 @@ class EmailReaderTests(unittest.TestCase):
         ):
             with self.assertRaises(EmailIngestionError):
                 EmailConfig.from_env()
+
+    def test_limits_each_run_to_newest_unread_messages(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            client = ManyMessagesFakeImapClient("host", 993, self._message())
+            config = EmailConfig(
+                host="host",
+                username="user",
+                password="secret",
+                attachment_dir=Path(directory),
+                max_messages=2,
+            )
+
+            files = download_unread_attachments(
+                config, client_factory=lambda host, port: client
+            )
+
+            fetched_ids = [
+                call[2]
+                for call in client.calls
+                if call[0:2] == ("uid", "fetch")
+            ]
+            self.assertEqual(fetched_ids, [b"3", b"4"])
+            self.assertEqual(len(files), 2)
 
 
 if __name__ == "__main__":

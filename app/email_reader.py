@@ -34,6 +34,7 @@ class EmailConfig:
     mailbox: str = "INBOX"
     attachment_dir: Path = Path("data/email_attachments")
     max_attachment_bytes: int = DEFAULT_MAX_ATTACHMENT_BYTES
+    max_messages: int = 25
 
     @classmethod
     def from_env(cls) -> "EmailConfig":
@@ -53,6 +54,7 @@ class EmailConfig:
             max_bytes = int(
                 os.getenv("EMAIL_MAX_ATTACHMENT_BYTES", str(DEFAULT_MAX_ATTACHMENT_BYTES))
             )
+            max_messages = int(os.getenv("EMAIL_MAX_MESSAGES", "25"))
         except ValueError as error:
             raise EmailIngestionError("Email port and size limit must be integers") from error
 
@@ -66,6 +68,7 @@ class EmailConfig:
                 os.getenv("EMAIL_ATTACHMENT_DIR", "data/email_attachments")
             ),
             max_attachment_bytes=max_bytes,
+            max_messages=max_messages,
         )
 
 
@@ -110,6 +113,9 @@ def download_unread_attachments(
             raise EmailIngestionError("Could not search unread messages")
 
         message_ids = data[0].split() if data and data[0] else []
+        # Newest UIDs are last. Limit each run so a large old inbox cannot
+        # block automation indefinitely.
+        message_ids = message_ids[-config.max_messages :]
         for message_id in message_ids:
             status, response = client.uid("fetch", message_id, "(RFC822)")
             if status != "OK" or not response:

@@ -1,6 +1,7 @@
 """Command-line entry point for manual document uploads."""
 
 import argparse
+import sys
 from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
@@ -30,6 +31,14 @@ from app.validator import (
     validate_invoice_business_rules,
     validate_invoice_schema,
 )
+
+
+def configure_console_output() -> None:
+    """Prevent localized document text from crashing legacy Windows consoles."""
+
+    reconfigure = getattr(sys.stdout, "reconfigure", None)
+    if reconfigure is not None:
+        reconfigure(errors="replace")
 
 
 def print_decision(decision: ProcessingDecision) -> None:
@@ -327,6 +336,7 @@ def process_email() -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    configure_console_output()
     args = build_parser().parse_args(argv)
     if args.email:
         if args.path:

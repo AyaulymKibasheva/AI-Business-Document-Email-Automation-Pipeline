@@ -84,6 +84,8 @@ Only unread messages are inspected. Supported attachments are saved under
 `data/email_attachments`, processed by the same validation and database
 pipeline, and the source message is marked as read after a supported attachment
 has been downloaded successfully.
+Each run inspects at most the newest 25 unread messages by default; change
+`EMAIL_MAX_MESSAGES` when a different limit is needed.
 
 Example output:
 
