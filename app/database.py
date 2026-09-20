@@ -309,3 +309,96 @@ def count_records(engine: Engine) -> dict[str, int]:
             name: len(session.scalars(select(model)).all())
             for name, model in models.items()
         }
+
+
+def _document_dict(document: DocumentRecord) -> dict:
+    """Serialize a document and its normalized invoice for API responses."""
+
+    extracted = document.extracted_data
+    return {
+        "id": document.id,
+        "filename": document.filename,
+        "document_type": document.document_type,
+        "status": document.status,
+        "created_at": document.created_at,
+        "processed_at": document.processed_at,
+        "extracted_data": (
+            {
+                "invoice_number": extracted.invoice_number,
+                "company": extracted.company,
+                "date": extracted.invoice_date,
+                "due_date": extracted.due_date,
+                "currency": extracted.currency,
+                "subtotal": float(extracted.subtotal) if extracted.subtotal is not None else None,
+                "tax": float(extracted.tax) if extracted.tax is not None else None,
+                "total": float(extracted.total),
+                "email": extracted.email,
+            }
+            if extracted is not None
+            else None
+        ),
+        "reasons": [error.message for error in document.errors],
+    }
+
+
+def get_document(engine: Engine, document_id: int) -> dict | None:
+    """Return one document with extracted data and review reasons."""
+
+    with Session(engine) as session:
+        document = session.get(DocumentRecord, document_id)
+        return _document_dict(document) if document is not None else None
+
+
+def get_document_by_hash(engine: Engine, file_hash: str) -> dict | None:
+    """Return a document by its immutable file hash."""
+
+    with Session(engine) as session:
+        document = session.scalar(
+            select(DocumentRecord).where(DocumentRecord.file_hash == file_hash)
+        )
+        return _document_dict(document) if document is not None else None
+
+
+def list_documents(
+    engine: Engine, *, status: str | None = None, limit: int = 100
+) -> list[dict]:
+    """List newest documents, optionally filtered by processing status."""
+
+    statement = select(DocumentRecord).order_by(DocumentRecord.id.desc()).limit(limit)
+    if status is not None:
+        statement = statement.where(DocumentRecord.status == status)
+    with Session(engine) as session:
+        return [_document_dict(document) for document in session.scalars(statement)]
+
+
+def approve_document(engine: Engine, document_id: int) -> dict | None:
+    """Move a needs-review document to processed and record the manual action."""
+
+    now = datetime.now(timezone.utc)
+    try:
+        with Session(engine) as session, session.begin():
+            document = session.get(DocumentRecord, document_id)
+            if document is None:
+                return None
+            if document.status != "needs_review":
+                raise DatabaseError(
+                    f"Only needs_review documents can be approved (current: {document.status})"
+                )
+            document.status = "processed"
+            document.processed_at = now
+            session.add(
+                ProcessingRunRecord(
+                    document_id=document.id,
+                    status="processed",
+                    model_name=None,
+                    confidence=None,
+                    uncertain_fields=None,
+                    started_at=now,
+                    completed_at=now,
+                )
+            )
+        return get_document(engine, document_id)
+    except DatabaseError:
+        raise
+    except SQLAlchemyError as error:
+        raise DatabaseError(f"Could not approve document: {error}") from error

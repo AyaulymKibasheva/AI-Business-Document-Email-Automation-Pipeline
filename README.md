@@ -37,6 +37,8 @@ tests/        Automated tests
   manual review (stage 14)
 - Importable n8n email-to-API workflow with attachment filtering and review
   routing (stage 15)
+- FastAPI upload, document retrieval, review queue, and approval endpoints
+  (stage 16)
 
 ## Run
 
@@ -121,6 +123,28 @@ messages through IMAP, keeps PDF/DOCX/TXT attachments, and uploads each file to
 the Python `POST /documents` endpoint. The workflow is intentionally inactive
 until stage 16 adds that API. See `n8n/README.md` for setup and duplicate-ingestion
 guidance.
+
+### FastAPI
+
+Start the API locally:
+
+```bash
+uvicorn app.api:create_app --factory --host 0.0.0.0 --port 8000
+```
+
+Interactive documentation is available at `http://localhost:8000/docs`.
+
+```text
+POST /documents
+GET  /documents
+GET  /documents/{id}
+GET  /review
+POST /documents/{id}/approve
+```
+
+`POST /documents` accepts multipart field `file`, rejects unsupported files and
+uploads larger than 20 MB, checks duplicates before AI processing, and returns
+the stored status for n8n routing.
 
 Example output:
 
