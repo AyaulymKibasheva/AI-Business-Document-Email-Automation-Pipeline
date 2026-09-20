@@ -21,7 +21,9 @@ class ExtractInvoiceDataTests(unittest.TestCase):
             email="billing@example.com",
         )
         client = Mock()
-        client.responses.parse.return_value = SimpleNamespace(output_parsed=expected)
+        client.chat.return_value = SimpleNamespace(
+            message=SimpleNamespace(content=expected.model_dump_json())
+        )
 
         result = extract_invoice_data(
             "Invoice INV-1048 from ABC Ltd. Total USD 1,250.00.",
@@ -30,11 +32,17 @@ class ExtractInvoiceDataTests(unittest.TestCase):
         )
 
         self.assertEqual(result, expected)
-        client.responses.parse.assert_called_once_with(
+        client.chat.assert_called_once_with(
             model="test-model",
-            instructions=ANY,
-            input="Invoice INV-1048 from ABC Ltd. Total USD 1,250.00.",
-            text_format=InvoiceData,
+            messages=[
+                {"role": "system", "content": ANY},
+                {
+                    "role": "user",
+                    "content": "Invoice INV-1048 from ABC Ltd. Total USD 1,250.00.",
+                },
+            ],
+            format=InvoiceData.model_json_schema(),
+            options={"temperature": 0},
         )
 
     def test_allows_missing_source_fields(self) -> None:
@@ -58,13 +66,15 @@ class ExtractInvoiceDataTests(unittest.TestCase):
         with self.assertRaisesRegex(DataExtractionError, "empty document"):
             extract_invoice_data("  ", client=client)
 
-        client.responses.parse.assert_not_called()
+        client.chat.assert_not_called()
 
-    def test_rejects_missing_parsed_output(self) -> None:
+    def test_rejects_empty_model_response(self) -> None:
         client = Mock()
-        client.responses.parse.return_value = SimpleNamespace(output_parsed=None)
+        client.chat.return_value = SimpleNamespace(
+            message=SimpleNamespace(content="")
+        )
 
-        with self.assertRaisesRegex(DataExtractionError, "no extracted invoice data"):
+        with self.assertRaisesRegex(DataExtractionError, "empty response"):
             extract_invoice_data("Invoice text", client=client)
 
 

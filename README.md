@@ -20,7 +20,7 @@ tests/        Automated tests
 - Plain-text extraction from PDF, DOCX, and TXT files (stage 3)
 - Extraction error logging to `logs/app.log`
 - AI classification into invoice, purchase order, receipt, contract, or other
-- Strict Pydantic Structured Output from the OpenAI Responses API (stage 4)
+- Free local AI classification with Ollama and Pydantic Structured Outputs (stage 4)
 - Structured invoice field extraction with nullable missing values (stage 5)
 
 ## Run
@@ -31,14 +31,21 @@ Python 3.10 or newer is required. Install the dependencies first:
 python -m pip install -r requirements.txt
 ```
 
-Copy `.env.example` to `.env` and add your OpenAI API key:
+Install [Ollama](https://ollama.com/download/windows), then download the local model:
 
-```env
-OPENAI_API_KEY=your_api_key_here
-OPENAI_MODEL=gpt-5.6-terra
+```bash
+ollama pull qwen2.5:3b
 ```
 
-The `.env` file is ignored by Git and must never be committed.
+Copy `.env.example` to `.env`:
+
+```env
+OLLAMA_HOST=http://localhost:11434
+OLLAMA_MODEL=qwen2.5:3b
+```
+
+The model runs locally. No paid API key is required, and document text is not
+sent to an external AI service.
 
 ```bash
 python -m app.main path/to/invoice.pdf

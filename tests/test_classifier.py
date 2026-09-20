@@ -2,7 +2,7 @@
 
 import unittest
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import ANY, Mock
 
 from app.classifier import (
     ClassificationError,
@@ -16,7 +16,9 @@ class ClassifyDocumentTests(unittest.TestCase):
     def test_returns_structured_classification(self) -> None:
         expected = DocumentClassification(document_type=DocumentCategory.INVOICE)
         client = Mock()
-        client.responses.parse.return_value = SimpleNamespace(output_parsed=expected)
+        client.chat.return_value = SimpleNamespace(
+            message=SimpleNamespace(content=expected.model_dump_json())
+        )
 
         result = classify_document(
             "Invoice number INV-100. Total: 42 USD.",
@@ -25,11 +27,17 @@ class ClassifyDocumentTests(unittest.TestCase):
         )
 
         self.assertEqual(result, expected)
-        client.responses.parse.assert_called_once_with(
+        client.chat.assert_called_once_with(
             model="test-model",
-            instructions=unittest.mock.ANY,
-            input="Invoice number INV-100. Total: 42 USD.",
-            text_format=DocumentClassification,
+            messages=[
+                {"role": "system", "content": ANY},
+                {
+                    "role": "user",
+                    "content": "Invoice number INV-100. Total: 42 USD.",
+                },
+            ],
+            format=DocumentClassification.model_json_schema(),
+            options={"temperature": 0},
         )
 
     def test_rejects_empty_text_without_api_call(self) -> None:
@@ -38,13 +46,15 @@ class ClassifyDocumentTests(unittest.TestCase):
         with self.assertRaisesRegex(ClassificationError, "empty document"):
             classify_document("   ", client=client)
 
-        client.responses.parse.assert_not_called()
+        client.chat.assert_not_called()
 
-    def test_rejects_missing_parsed_output(self) -> None:
+    def test_rejects_empty_model_response(self) -> None:
         client = Mock()
-        client.responses.parse.return_value = SimpleNamespace(output_parsed=None)
+        client.chat.return_value = SimpleNamespace(
+            message=SimpleNamespace(content="")
+        )
 
-        with self.assertRaisesRegex(ClassificationError, "no classification"):
+        with self.assertRaisesRegex(ClassificationError, "empty response"):
             classify_document("Some document", client=client)
 
 
