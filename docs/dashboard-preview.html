@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Document AI Control Center</title>
+  <style>
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;color:#12375f;background:#f3f9ff}
+    .app{display:grid;grid-template-columns:285px 1fr;min-height:900px}.side{padding:34px 24px;background:linear-gradient(180deg,#f1f8ff,#c9e5ff);border-right:1px solid #b9dcff}
+    .brand{font-size:22px;font-weight:800;margin-bottom:7px}.diamond{color:#27a5ff}.muted{color:#6986a4;font-size:14px}.label{margin-top:34px;font-size:14px;font-weight:650}
+    .select{margin-top:9px;padding:13px 14px;border-radius:12px;background:white;border:1px solid #90c9ff;display:flex;justify-content:space-between;box-shadow:0 5px 16px #1967b214}
+    .range{height:5px;background:#c2dcf5;border-radius:9px;margin:34px 6px 26px;position:relative}.range:before{content:"50";position:absolute;left:43%;top:-25px;font-size:13px}.range:after{content:"";position:absolute;left:45%;top:-5px;width:15px;height:15px;border-radius:50%;background:#1479ff}
+    .button{padding:14px;text-align:center;color:white;font-weight:750;border-radius:12px;background:linear-gradient(100deg,#0865d5,#218dff);box-shadow:0 8px 20px #0865d53d}
+    .stack{border-top:1px solid #afd5f7;margin-top:48px;padding-top:28px;color:#6986a4;font-size:13px}.main{padding:42px 54px}
+    .hero{padding:32px 38px;border-radius:24px;color:white;background:linear-gradient(120deg,#0c4a91,#1479ff 62%,#56b7ff);box-shadow:0 16px 40px #1479ff38}
+    h1{font-size:39px;margin:0 0 10px;letter-spacing:-1.4px}.hero p{margin:0;opacity:.9;font-size:17px}.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:18px;margin:24px 0 30px}
+    .card{background:white;border:1px solid #d7eaff;border-radius:18px;padding:21px;box-shadow:0 8px 24px #105cad14}.card small{color:#587797}.value{font-size:34px;color:#073a7a;margin-top:12px}
+    .grid{display:grid;grid-template-columns:2fr 1fr;gap:20px}.panel{background:white;border:1px solid #d7eaff;border-radius:20px;padding:22px;box-shadow:0 8px 24px #105cad10}.panel h2{font-size:20px;margin:0 0 22px}.chart{height:245px;display:flex;align-items:end;justify-content:space-around;border-left:1px solid #dceaf7;border-bottom:1px solid #dceaf7;padding:0 25px}.bar{width:72px;border-radius:8px 8px 0 0;background:linear-gradient(#43a7ff,#1479ff);position:relative}.bar:after{position:absolute;bottom:-28px;width:120px;left:-24px;text-align:center;color:#617e99;font-size:13px}.b1{height:178px}.b1:after{content:"Processed"}.b2{height:76px;background:linear-gradient(#8acaff,#56b7ff)}.b2:after{content:"Needs review"}.b3{height:32px;background:#9fcfff}.b3:after{content:"Failed"}
+    .notice{padding:18px;border-radius:12px;background:#ddecff;color:#176bb8}.progress-label{margin:28px 0 10px}.progress{height:10px;border-radius:9px;background:#dceaf7;overflow:hidden}.progress div{width:74%;height:100%;background:#1479ff}
+    .table{margin-top:22px}.row{display:grid;grid-template-columns:2fr 1.2fr 1fr 1fr;padding:13px 14px;border-bottom:1px solid #e3eef8}.row.head{font-weight:750;background:#eaf5ff;border-radius:10px}.pill{display:inline-block;padding:4px 9px;border-radius:20px;background:#dff0ff;color:#0759aa;font-weight:700;font-size:12px}
+  </style>
+</head>
+<body><div class="app">
+  <aside class="side"><div class="brand"><span class="diamond">◆</span> Control Center</div><div class="muted">AI Business Document Pipeline</div><div class="label">Document status</div><div class="select"><span>all</span><span>⌄</span></div><div class="label">Recent documents</div><div class="range"></div><div class="button">↻ Refresh dashboard</div><div class="stack">FastAPI · MySQL · Ollama · n8n</div></aside>
+  <main class="main"><section class="hero"><h1>Document AI Control Center</h1><p>Invoices, automation health and manual review in one calm workspace.</p></section>
+    <section class="cards"><div class="card"><small>Total documents</small><div class="value">24</div></div><div class="card"><small>Processed</small><div class="value">18</div></div><div class="card"><small>Needs review</small><div class="value">4</div></div><div class="card"><small>Failed</small><div class="value">2</div></div><div class="card"><small>Invoice amount</small><div class="value">18,540</div></div></section>
+    <section class="grid"><div class="panel"><h2>Processing health</h2><div class="chart"><div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div></div></div><div class="panel"><h2>Latest activity</h2><div class="notice">Last processing run<br><strong>2026-09-21 03:18</strong></div><div class="progress-label">Processing completion&nbsp; <strong>74%</strong></div><div class="progress"><div></div></div></div></section>
+    <section class="panel table"><h2>Recent documents</h2><div class="row head"><span>File</span><span>Company</span><span>Total</span><span>Status</span></div><div class="row"><span>invoice_1048.pdf</span><span>Blue Sky Ltd</span><span>$1,250.50</span><span><b class="pill">processed</b></span></div><div class="row"><span>invoice_1049.pdf</span><span>Northwind</span><span>$860.00</span><span><b class="pill">needs review</b></span></div></section>
+  </main>
+</div></body></html>

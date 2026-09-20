@@ -1,304 +1,244 @@
 # AI Business Document & Email Automation Pipeline
 
-A structured foundation for an AI-powered business document processing and
-workflow automation system.
+![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?logo=fastapi&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-8.4-4479A1?logo=mysql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![Ollama](https://img.shields.io/badge/AI-Ollama-black)
+![Tests](https://img.shields.io/badge/tests-70%20passing-2ea44f)
 
-## Project structure
+Production-style workflow for receiving business documents from email or an
+API, extracting structured invoice data with local AI, validating it, storing
+it in MySQL, and routing the result to Google Sheets, notifications, and manual
+review.
 
-```text
-app/          Application modules
-data/         Local input and generated data
-logs/         Application logs
-tests/        Automated tests
+The AI model runs locally through Ollama, so the core workflow does not require
+a paid API key.
+
+![Document AI dashboard](docs/screenshots/dashboard-preview.png)
+
+## What it demonstrates
+
+- PDF, DOCX, and TXT document intake
+- Gmail/IMAP attachment ingestion
+- Local AI classification and structured extraction with Ollama
+- Strict Pydantic schemas and deterministic business rules
+- `processed`, `needs_review`, and `failed` decision routing
+- File-hash and invoice-identity duplicate protection
+- MySQL persistence and processing history
+- Google Sheets synchronization and Gmail notifications
+- FastAPI endpoints for uploads, queries, review, and approval
+- n8n orchestration without moving core business logic out of Python
+- Streamlit operations dashboard and manual-review queue
+- Docker Compose deployment with health checks and persistent volumes
+- Rotating logs, retries, batch isolation, and 70 automated tests
+
+## Architecture
+
+```mermaid
+flowchart LR
+    A[Gmail / IMAP] --> B[n8n workflow]
+    U[Manual upload] --> C[FastAPI]
+    B --> C
+    C --> D[Text extraction]
+    D --> E[Ollama local AI]
+    E --> F[Pydantic schema]
+    F --> G[Business rules]
+    G --> H{Decision}
+    H -->|processed| I[(MySQL)]
+    H -->|needs_review| J[Manual review]
+    H -->|failed| K[Logs + retry]
+    J --> I
+    I --> L[Google Sheets]
+    I --> M[Gmail notification]
+    I --> N[Streamlit dashboard]
 ```
 
-## Current features
+## Dashboard
 
-- Organized application skeleton (stage 1)
-- Manual PDF, DOCX, and TXT document intake (stage 2)
-- File existence and supported-type validation
-- Plain-text extraction from PDF, DOCX, and TXT files (stage 3)
-- Extraction error logging to `logs/app.log`
-- AI classification into invoice, purchase order, receipt, contract, or other
-- Free local AI classification with Ollama and Pydantic Structured Outputs (stage 4)
-- Structured invoice field extraction with nullable missing values (stage 5)
-- Strict Pydantic invoice schema and type validation (stage 6)
-- Deterministic Python business-rule validation (stage 7)
-- Processing statuses: `processed`, `needs_review`, and `failed` (stage 8)
-- MySQL persistence for documents, extracted data, runs, and errors (stage 9)
-- Duplicate prevention by SHA-256 hash and invoice identity (stage 10)
-- Batch processing for all supported documents in a folder, with an aggregate
-  status summary and per-file failure isolation (stage 11)
-- IMAP email automation that downloads unread PDF, DOCX, and TXT attachments,
-  then sends only the newly downloaded files through the pipeline (stage 12)
-- Google Sheets synchronization for validated invoices and review status
-  (stage 13)
-- Gmail SMTP notifications for processed invoices and documents requiring
-  manual review (stage 14)
-- Importable n8n email-to-API workflow with attachment filtering and review
-  routing (stage 15)
-- FastAPI upload, document retrieval, review queue, and approval endpoints
-  (stage 16)
-- Rotating application logs and bounded exponential retries for transient local
-  AI failures, with per-document batch isolation (stage 17)
-- Docker image and Compose stack for FastAPI, MySQL, and n8n with persistent
-  volumes and health-based startup ordering (stage 18)
-- Blue Streamlit operations dashboard with metrics, status filtering, recent
-  documents, and a manual-review approval queue (stage 19)
-- Reproducible final workflow demonstration with successful and manual-review
-  invoice examples plus an automatic duplicate check (stage 20)
+The blue operations dashboard displays totals, processing health, invoice
+amounts, recent documents, and the manual-review queue. Review items can be
+approved directly from the interface.
 
-## Run
+Open it at [http://localhost:8501](http://localhost:8501) after starting Docker.
 
-Python 3.10 or newer is required. Install the dependencies first:
+## API
 
-```bash
-python -m pip install -r requirements.txt
-```
+![FastAPI interactive documentation](docs/screenshots/api-docs.png)
 
-Install [Ollama](https://ollama.com/download/windows), then download the local model:
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` | `/health` | Container and API health check |
+| `POST` | `/documents` | Upload and process a document |
+| `GET` | `/documents` | List processed documents |
+| `GET` | `/documents/{id}` | Retrieve one document |
+| `GET` | `/review` | List documents requiring review |
+| `POST` | `/documents/{id}/approve` | Approve a reviewed document |
+
+Interactive documentation: [http://localhost:8016/docs](http://localhost:8016/docs)
+
+## Quick start with Docker
+
+### 1. Install prerequisites
+
+- Docker Desktop
+- [Ollama](https://ollama.com/download/windows)
+- Git
+
+Download the free local model:
 
 ```bash
 ollama pull qwen2.5:3b
 ```
 
-Copy `.env.example` to `.env`:
+### 2. Configure the project
+
+Copy `.env.example` to `.env` and `.env.docker.example` to `.env.docker`.
+Replace the placeholder database passwords in `.env.docker`.
+
+The minimum local AI configuration is:
 
 ```env
 OLLAMA_HOST=http://localhost:11434
 OLLAMA_MODEL=qwen2.5:3b
-DATABASE_URL=mysql+pymysql://document_app:change_me@localhost:3306/document_automation?charset=utf8mb4
 ```
 
-The model runs locally. No paid API key is required, and document text is not
-sent to an external AI service.
+Gmail and Google Sheets settings are optional. Never commit `.env`, app
+passwords, or service-account JSON files.
 
-```bash
-python -m app.main path/to/invoice.pdf
-```
-
-To process every supported file in a folder:
-
-```bash
-python -m app.main path/to/documents/
-```
-
-The batch continues when an individual document fails and finishes with a
-summary such as `50 received`, `43 processed`, `5 needs review`, `2 failed`.
-
-### Email automation
-
-Add the IMAP settings from `.env.example` to the ignored local `.env`. Use an
-app password supplied by your email provider rather than your normal account
-password. Then run:
-
-```bash
-python -m app.main --email
-```
-
-Only unread messages are inspected. Supported attachments are saved under
-`data/email_attachments`, processed by the same validation and database
-pipeline, and the source message is marked as read after a supported attachment
-has been downloaded successfully.
-Each run inspects at most the newest 25 unread messages by default; change
-`EMAIL_MAX_MESSAGES` when a different limit is needed.
-
-### Google Sheets integration
-
-Create a Google Cloud service account, enable the Google Sheets API, download
-its JSON key under `credentials/`, and share the destination spreadsheet with
-the service account email as an Editor. Then set the three `GOOGLE_SHEETS_*`
-values shown in `.env.example`. Credential JSON files and `.env` are ignored by
-Git. When configured, every validated invoice is appended to the `Invoices`
-worksheet with these columns:
-
-```text
-Invoice | Company | Date | Total | Currency | Status
-```
-
-### Email notifications
-
-The pipeline sends a compact success or manual-review message after a validated
-invoice is saved. For Gmail, the stage 12 username and app password are reused
-automatically, and the notification goes back to that account by default. Set
-the optional `SMTP_*` and `NOTIFICATION_EMAIL_TO` variables from `.env.example`
-to use a different sender or recipient.
-
-### n8n workflow
-
-Import `n8n/workflows/email-document-pipeline.json` into n8n. It receives Gmail
-messages through IMAP, keeps PDF/DOCX/TXT attachments, and uploads each file to
-the Python `POST /documents` endpoint. The workflow is intentionally inactive
-until stage 16 adds that API. See `n8n/README.md` for setup and duplicate-ingestion
-guidance.
-
-### FastAPI
-
-Start the API locally:
-
-```bash
-uvicorn app.api:create_app --factory --host 0.0.0.0 --port 8000
-```
-
-Interactive documentation is available at `http://localhost:8000/docs`.
-
-```text
-POST /documents
-GET  /documents
-GET  /documents/{id}
-GET  /review
-POST /documents/{id}/approve
-```
-
-`POST /documents` accepts multipart field `file`, rejects unsupported files and
-uploads larger than 20 MB, checks duplicates before AI processing, and returns
-the stored status for n8n routing.
-
-### Logs and retries
-
-Runtime events and final errors are written to UTF-8 `logs/app.log`. The log
-rotates at 5 MB and keeps three backups. Temporary Ollama request failures are
-retried three times with exponential delays (`1s`, `2s`) by default. Configure
-this with `AI_MAX_ATTEMPTS` and `AI_RETRY_BASE_SECONDS`. Empty or invalid model
-output is treated as a data error and is not retried. A failed document remains
-isolated and does not stop the rest of a batch.
-
-### Docker Compose
-
-Install Docker Desktop, copy `.env.docker.example` to `.env.docker`, replace all
-`change_me` values, and keep the existing local `.env` for Gmail/Ollama settings.
-Then run:
+### 3. Start the stack
 
 ```bash
 docker compose --env-file .env.docker up --build -d
 docker compose --env-file .env.docker ps
 ```
 
-Open FastAPI docs at `http://localhost:8016/docs` and n8n at
-`http://localhost:5678`. MySQL is exposed on host port `3307` so it does not
-conflict with an existing local MySQL on `3306`. Inside Compose, n8n reaches the
-API at `http://api:8000`, while the API reaches the Windows Ollama service at
-`http://host.docker.internal:11434`.
+| Service | URL / port |
+|---|---|
+| Dashboard | http://localhost:8501 |
+| FastAPI docs | http://localhost:8016/docs |
+| n8n | http://localhost:5678 |
+| MySQL | localhost:3307 |
 
-Import `/home/node/workflows/email-document-pipeline.json` in n8n and configure
-the Gmail IMAP credential. Do not activate both n8n email ingestion and the
-Python `--email` poller for the same inbox.
+MySQL uses host port `3307` to avoid conflicting with a local MySQL installation
+on port `3306`.
 
-Stop containers without deleting persistent data:
+## Final end-to-end demo
 
-```bash
-docker compose --env-file .env.docker down
+Run the successful invoice scenario:
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.demo_workflow
 ```
 
-Add `-v` only when you intentionally want to delete MySQL and n8n volumes.
+The demo verifies API health, uploads an invoice, runs extraction and
+validation, saves the result, and uploads the same file again to prove duplicate
+detection.
 
-### Streamlit dashboard
+Run the manual-review scenario:
 
-The dashboard is included in Docker Compose and opens at
-`http://localhost:8501`. It shows total documents, processed/review/failed
-counts, total invoice amount, the latest processing run, a status chart, recent
-documents, and manual approval controls. To run it without Docker:
+```powershell
+.\.venv\Scripts\python.exe -m scripts.demo_workflow `
+  --file demo/invoice_needs_review.txt `
+  --skip-duplicate-check
+```
+
+The second example intentionally omits an invoice number and uses an invalid
+total. It is routed to the dashboard review queue.
+
+## Run without Docker
 
 ```bash
+python -m venv .venv
+python -m pip install -r requirements.txt
+python -m app.main path/to/invoice.pdf
+```
+
+Batch-process a directory:
+
+```bash
+python -m app.main path/to/documents/
+```
+
+Read new supported attachments from the configured inbox:
+
+```bash
+python -m app.main --email
+```
+
+Start the API and dashboard separately:
+
+```bash
+uvicorn app.api:create_app --factory --host 0.0.0.0 --port 8000
 streamlit run app/dashboard.py
 ```
 
-### Final demonstration
+## Validation and review rules
 
-Start the Docker Compose stack and make sure Ollama is running on Windows. Then
-run the complete happy-path demo from the project directory:
+After AI extraction, every invoice passes through:
 
-```bash
-python -m scripts.demo_workflow
-```
+1. Pydantic type and schema validation.
+2. Required-field checks.
+3. Positive amount and supported-currency checks.
+4. Email and date validation.
+5. Subtotal + tax = total verification.
+6. Confidence and uncertain-field assessment.
 
-The command checks FastAPI health, uploads `demo/invoice_processed.txt`, waits
-for classification, extraction, validation, and MySQL persistence, then uploads
-the same document again to prove duplicate detection. Open
-`http://localhost:8501` to show the saved result in the dashboard. If Google
-Sheets and Gmail settings are present, the normal pipeline also appends the row
-and sends the configured notification.
+Missing or suspicious business data produces `needs_review`. Technical errors
+produce `failed`. One bad document never stops the remaining batch.
 
-To demonstrate the manual-review route, use:
+## Integrations
 
-```bash
-python -m scripts.demo_workflow --file demo/invoice_needs_review.txt --skip-duplicate-check
-```
+### Gmail
 
-That example intentionally omits the invoice number and contains an incorrect
-total. It should appear in the dashboard's manual review queue, where it can be
-approved by a person.
+Configure `IMAP_*` values for attachment ingestion and `SMTP_*` values for
+notifications. Use a Gmail app password, not the normal account password.
 
-Final presentation flow:
+### Google Sheets
+
+Enable the Google Sheets API, create a service account, place its ignored JSON
+key under `credentials/`, share the spreadsheet with the service-account email,
+and configure the `GOOGLE_SHEETS_*` variables.
+
+### n8n
+
+Import `n8n/workflows/email-document-pipeline.json`. The workflow receives
+email attachments and sends them to FastAPI. Keep classification, validation,
+and persistence in Python.
+
+## Project structure
 
 ```text
-Gmail attachment → n8n → FastAPI → local Ollama AI → Pydantic/business rules
-→ duplicate detection → MySQL → Google Sheets → Gmail notification → dashboard
+app/                 Core pipeline, API, integrations, and dashboard
+demo/                Safe demonstration invoices
+docs/screenshots/    Portfolio screenshots
+n8n/workflows/       Importable automation workflow
+scripts/             End-to-end demo runner
+tests/               Automated test suite
+Dockerfile
+docker-compose.yml
+requirements.txt
 ```
 
-Example output:
-
-```text
-invoice.pdf
--> PDF detected
--> ready for processing
--> text extracted
-
-Document text:
-
-Invoice INV-001
-
-Document classification:
-
-{
-  "document_type": "invoice"
-}
-
-Extracted invoice data:
-
-{
-  "invoice_number": "INV-001",
-  "company_name": "Example Ltd",
-  "invoice_date": "2026-09-15",
-  "due_date": null,
-  "currency": "USD",
-  "subtotal": 1000.0,
-  "tax": 250.0,
-  "total": 1250.0,
-  "email": "billing@example.com",
-  "confidence": 0.96,
-  "uncertain_fields": []
-}
-
--> Pydantic schema validation passed
--> business rules validation passed
-
-Status: processed
-```
-
-Business rules verify required text, positive totals, supported currencies,
-email format, date order, non-negative amounts, and subtotal/tax arithmetic.
-Missing required data, low confidence, uncertain fields, or failed business
-rules produce `needs_review`. Technical failures produce `failed`.
-
-## Database
-
-The SQLAlchemy schema creates these MySQL tables:
-
-- `documents`
-- `extracted_data`
-- `processing_runs`
-- `errors`
-
-Set `DATABASE_URL` to enable persistence. Database credentials belong only in
-the ignored local `.env`; `.env.example` contains placeholders.
-
-Before AI processing, the pipeline checks the file SHA-256 hash. Before saving
-an invoice, it also checks the `invoice_number + company` pair. A duplicate is
-reported and is not inserted a second time.
-
-## Test
+## Tests
 
 ```bash
 python -m unittest discover -v
 ```
+
+Current result: **70 tests passing**.
+
+## Security notes
+
+- Secrets are loaded only from ignored environment files.
+- Uploaded API files are size-limited and removed after processing.
+- Credential JSON files are excluded from Git.
+- AI processing can remain fully local with Ollama.
+- Docker services use health checks and persistent named volumes.
+
+## Portfolio summary
+
+This repository demonstrates a complete AI-powered document-processing system,
+not only a PDF-to-JSON prototype: ingestion, local AI, schema validation,
+business controls, persistence, automation, human review, observability, APIs,
+and containerized deployment are all included.
