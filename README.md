@@ -27,6 +27,8 @@ tests/        Automated tests
 - Processing statuses: `processed`, `needs_review`, and `failed` (stage 8)
 - MySQL persistence for documents, extracted data, runs, and errors (stage 9)
 - Duplicate prevention by SHA-256 hash and invoice identity (stage 10)
+- Batch processing for all supported documents in a folder, with an aggregate
+  status summary and per-file failure isolation (stage 11)
 
 ## Run
 
@@ -56,6 +58,15 @@ sent to an external AI service.
 ```bash
 python -m app.main path/to/invoice.pdf
 ```
+
+To process every supported file in a folder:
+
+```bash
+python -m app.main path/to/documents/
+```
+
+The batch continues when an individual document fails and finishes with a
+summary such as `50 received`, `43 processed`, `5 needs review`, `2 failed`.
 
 Example output:
 

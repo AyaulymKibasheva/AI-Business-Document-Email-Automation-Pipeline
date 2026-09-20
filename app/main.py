@@ -3,6 +3,7 @@
 import argparse
 from collections.abc import Sequence
 from datetime import datetime, timezone
+from pathlib import Path
 
 from sqlalchemy.engine import Engine
 
@@ -19,7 +20,7 @@ from app.database import (
 )
 from app.data_extractor import DataExtractionError, extract_invoice_data
 from app.extractor import TextExtractionError, extract_text
-from app.parser import receive_document
+from app.parser import SUPPORTED_EXTENSIONS, receive_document
 from app.local_ai import DEFAULT_MODEL
 from app.status import ProcessingDecision, assess_invoice, failed, processed
 from app.validator import (
@@ -81,18 +82,19 @@ def save_result(
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Upload a business document to the processing pipeline."
+        description="Process one business document or every supported file in a folder."
     )
-    parser.add_argument("file", help="Path to a PDF, DOCX, or TXT document")
+    parser.add_argument("path", help="Path to a PDF, DOCX, TXT document, or folder")
     return parser
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+def process_document(file_path: str | Path) -> int:
+    """Process one document and return 0, 1, or 2 for its final status."""
+
     started_at = datetime.now(timezone.utc)
 
     try:
-        document = receive_document(args.file)
+        document = receive_document(file_path)
     except (FileNotFoundError, ValueError) as error:
         print(f"Error: {error}")
         print_decision(failed(str(error)))
@@ -247,6 +249,65 @@ def main(argv: Sequence[str] | None = None) -> int:
         ):
             return 1
     return 0
+
+
+def discover_documents(directory: str | Path) -> list[Path]:
+    """Return supported files in a directory in stable filename order."""
+
+    root = Path(directory)
+    return sorted(
+        (
+            path
+            for path in root.iterdir()
+            if path.is_file() and path.suffix.lower() in SUPPORTED_EXTENSIONS
+        ),
+        key=lambda path: path.name.lower(),
+    )
+
+
+def process_batch(directory: str | Path) -> int:
+    """Process all supported files without letting one failure stop the batch."""
+
+    documents = discover_documents(directory)
+    if not documents:
+        print("No supported PDF, DOCX, or TXT documents found.")
+        return 1
+
+    counts = {"processed": 0, "needs_review": 0, "failed": 0}
+    print(f"Batch processing: {len(documents)} document(s) received")
+
+    for index, path in enumerate(documents, start=1):
+        print(f"\n{'=' * 72}")
+        print(f"[{index}/{len(documents)}] {path.name}")
+        print("=" * 72)
+        try:
+            result = process_document(path)
+        except Exception as error:
+            # A defensive boundary keeps unexpected failures isolated per file.
+            print(f"Unexpected error: {error}")
+            result = 1
+
+        if result == 0:
+            counts["processed"] += 1
+        elif result == 2:
+            counts["needs_review"] += 1
+        else:
+            counts["failed"] += 1
+
+    print("\nBatch summary")
+    print(f"{len(documents)} received")
+    print(f"{counts['processed']} processed")
+    print(f"{counts['needs_review']} needs review")
+    print(f"{counts['failed']} failed")
+    return 1 if counts["failed"] else 0
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    path = Path(args.path).expanduser()
+    if path.is_dir():
+        return process_batch(path)
+    return process_document(path)
 
 
 if __name__ == "__main__":
