@@ -25,6 +25,11 @@ from app.email_reader import EmailConfig, EmailIngestionError, download_unread_a
 from app.parser import SUPPORTED_EXTENSIONS, receive_document
 from app.local_ai import DEFAULT_MODEL
 from app.status import ProcessingDecision, assess_invoice, failed, processed
+from app.sheets_writer import (
+    GoogleSheetsConfig,
+    GoogleSheetsError,
+    append_invoice_row,
+)
 from app.validator import (
     Invoice,
     InvoiceSchemaError,
@@ -87,6 +92,21 @@ def save_result(
         return False
     except DatabaseError as error:
         print(f"Database error: {error}")
+        return False
+
+
+def sync_invoice_to_sheets(invoice: Invoice, decision: ProcessingDecision) -> bool:
+    """Append an invoice when Google Sheets integration is configured."""
+
+    try:
+        config = GoogleSheetsConfig.from_env()
+        if config is None:
+            return True
+        append_invoice_row(config, invoice, decision.status.value)
+        print("-> added to Google Sheets")
+        return True
+    except GoogleSheetsError as error:
+        print(f"Google Sheets error: {error}")
         return False
 
 
@@ -222,7 +242,7 @@ def process_document(file_path: str | Path) -> int:
         if decision.status.value == "needs_review":
             print("-> business rules or confidence review required")
             print_decision(decision)
-            save_result(
+            saved = save_result(
                 engine,
                 filename=document.filename,
                 file_hash=file_hash,
@@ -234,6 +254,8 @@ def process_document(file_path: str | Path) -> int:
                 confidence=invoice.confidence,
                 uncertain_fields=invoice.uncertain_fields,
             )
+            if saved:
+                sync_invoice_to_sheets(validated_invoice, decision)
             return 2
 
         print("-> business rules validation passed")
@@ -250,6 +272,8 @@ def process_document(file_path: str | Path) -> int:
             confidence=invoice.confidence,
             uncertain_fields=invoice.uncertain_fields,
         ):
+            return 1
+        if not sync_invoice_to_sheets(validated_invoice, decision):
             return 1
     else:
         print("\n-> structured extraction is not available for this document type yet")

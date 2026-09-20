@@ -31,6 +31,8 @@ tests/        Automated tests
   status summary and per-file failure isolation (stage 11)
 - IMAP email automation that downloads unread PDF, DOCX, and TXT attachments,
   then sends only the newly downloaded files through the pipeline (stage 12)
+- Google Sheets synchronization for validated invoices and review status
+  (stage 13)
 
 ## Run
 
@@ -86,6 +88,19 @@ pipeline, and the source message is marked as read after a supported attachment
 has been downloaded successfully.
 Each run inspects at most the newest 25 unread messages by default; change
 `EMAIL_MAX_MESSAGES` when a different limit is needed.
+
+### Google Sheets integration
+
+Create a Google Cloud service account, enable the Google Sheets API, download
+its JSON key under `credentials/`, and share the destination spreadsheet with
+the service account email as an Editor. Then set the three `GOOGLE_SHEETS_*`
+values shown in `.env.example`. Credential JSON files and `.env` are ignored by
+Git. When configured, every validated invoice is appended to the `Invoices`
+worksheet with these columns:
+
+```text
+Invoice | Company | Date | Total | Currency | Status
+```
 
 Example output:
 
