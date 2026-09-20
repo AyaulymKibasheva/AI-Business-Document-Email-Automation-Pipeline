@@ -402,3 +402,27 @@ def approve_document(engine: Engine, document_id: int) -> dict | None:
         raise
     except SQLAlchemyError as error:
         raise DatabaseError(f"Could not approve document: {error}") from error
+
+
+def dashboard_metrics(engine: Engine) -> dict:
+    """Return exact aggregate metrics for the Streamlit dashboard."""
+
+    with Session(engine) as session:
+        statuses = {
+            status: session.scalar(
+                select(func.count(DocumentRecord.id)).where(
+                    DocumentRecord.status == status
+                )
+            )
+            or 0
+            for status in ("processed", "needs_review", "failed")
+        }
+        total_documents = session.scalar(select(func.count(DocumentRecord.id))) or 0
+        total_amount = session.scalar(select(func.sum(ExtractedDataRecord.total))) or 0
+        last_run = session.scalar(select(func.max(ProcessingRunRecord.completed_at)))
+    return {
+        "total_documents": int(total_documents),
+        **{name: int(value) for name, value in statuses.items()},
+        "total_invoice_amount": float(total_amount),
+        "last_processing_run": last_run,
+    }

@@ -19,7 +19,7 @@ class DockerConfigurationTests(unittest.TestCase):
     def test_compose_contains_required_services(self) -> None:
         self.assertEqual(
             set(self.compose["services"]),
-            {"api", "mysql", "n8n"},
+            {"api", "mysql", "n8n", "dashboard"},
         )
 
     def test_api_waits_for_healthy_mysql(self) -> None:
@@ -31,6 +31,10 @@ class DockerConfigurationTests(unittest.TestCase):
         dependency = self.compose["services"]["n8n"]["depends_on"]["api"]
         self.assertEqual(dependency["condition"], "service_healthy")
         self.assertIn("HEALTHCHECK", self.dockerfile)
+
+    def test_dashboard_has_streamlit_healthcheck(self) -> None:
+        healthcheck = self.compose["services"]["dashboard"]["healthcheck"]
+        self.assertIn("8501/_stcore/health", " ".join(healthcheck["test"]))
 
     def test_persistent_named_volumes_are_defined(self) -> None:
         self.assertTrue(

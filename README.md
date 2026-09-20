@@ -43,6 +43,8 @@ tests/        Automated tests
   AI failures, with per-document batch isolation (stage 17)
 - Docker image and Compose stack for FastAPI, MySQL, and n8n with persistent
   volumes and health-based startup ordering (stage 18)
+- Blue Streamlit operations dashboard with metrics, status filtering, recent
+  documents, and a manual-review approval queue (stage 19)
 
 ## Run
 
@@ -187,6 +189,17 @@ docker compose --env-file .env.docker down
 ```
 
 Add `-v` only when you intentionally want to delete MySQL and n8n volumes.
+
+### Streamlit dashboard
+
+The dashboard is included in Docker Compose and opens at
+`http://localhost:8501`. It shows total documents, processed/review/failed
+counts, total invoice amount, the latest processing run, a status chart, recent
+documents, and manual approval controls. To run it without Docker:
+
+```bash
+streamlit run app/dashboard.py
+```
 
 Example output:
 
