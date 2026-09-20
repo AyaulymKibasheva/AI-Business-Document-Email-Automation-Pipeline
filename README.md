@@ -33,6 +33,8 @@ tests/        Automated tests
   then sends only the newly downloaded files through the pipeline (stage 12)
 - Google Sheets synchronization for validated invoices and review status
   (stage 13)
+- Gmail SMTP notifications for processed invoices and documents requiring
+  manual review (stage 14)
 
 ## Run
 
@@ -101,6 +103,14 @@ worksheet with these columns:
 ```text
 Invoice | Company | Date | Total | Currency | Status
 ```
+
+### Email notifications
+
+The pipeline sends a compact success or manual-review message after a validated
+invoice is saved. For Gmail, the stage 12 username and app password are reused
+automatically, and the notification goes back to that account by default. Set
+the optional `SMTP_*` and `NOTIFICATION_EMAIL_TO` variables from `.env.example`
+to use a different sender or recipient.
 
 Example output:
 

@@ -24,6 +24,11 @@ from app.extractor import TextExtractionError, extract_text
 from app.email_reader import EmailConfig, EmailIngestionError, download_unread_attachments
 from app.parser import SUPPORTED_EXTENSIONS, receive_document
 from app.local_ai import DEFAULT_MODEL
+from app.notifier import (
+    EmailNotificationConfig,
+    NotificationError,
+    send_email_notification,
+)
 from app.status import ProcessingDecision, assess_invoice, failed, processed
 from app.sheets_writer import (
     GoogleSheetsConfig,
@@ -107,6 +112,21 @@ def sync_invoice_to_sheets(invoice: Invoice, decision: ProcessingDecision) -> bo
         return True
     except GoogleSheetsError as error:
         print(f"Google Sheets error: {error}")
+        return False
+
+
+def notify_invoice_by_email(invoice: Invoice, decision: ProcessingDecision) -> bool:
+    """Send an email notification when SMTP integration is configured."""
+
+    try:
+        config = EmailNotificationConfig.from_env()
+        if config is None:
+            return True
+        send_email_notification(config, invoice, decision)
+        print("-> email notification sent")
+        return True
+    except NotificationError as error:
+        print(f"Notification error: {error}")
         return False
 
 
@@ -256,6 +276,7 @@ def process_document(file_path: str | Path) -> int:
             )
             if saved:
                 sync_invoice_to_sheets(validated_invoice, decision)
+                notify_invoice_by_email(validated_invoice, decision)
             return 2
 
         print("-> business rules validation passed")
@@ -274,6 +295,8 @@ def process_document(file_path: str | Path) -> int:
         ):
             return 1
         if not sync_invoice_to_sheets(validated_invoice, decision):
+            return 1
+        if not notify_invoice_by_email(validated_invoice, decision):
             return 1
     else:
         print("\n-> structured extraction is not available for this document type yet")
