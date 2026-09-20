@@ -14,5 +14,6 @@ logs/*
 # Local secrets (the current placeholder is safe; add real values locally only)
 .env
 .env.local
+.env.docker
 credentials/*.json
 service-account*.json

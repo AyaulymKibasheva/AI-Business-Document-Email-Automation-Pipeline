@@ -12,8 +12,8 @@ deliberately inactive until stage 16 exposes `POST /documents`.
    - SSL/TLS: enabled
    - username: Gmail address
    - password: Google app password (never the normal account password)
-3. Keep the workflow inactive until `http://host.docker.internal:8000/documents`
-   responds successfully after stage 16.
+3. In Docker Compose, keep the API URL as `http://api:8000/documents`. For a
+   standalone n8n installation, replace it with the reachable FastAPI URL.
 4. Run one manual test with an unread email containing a PDF, DOCX, or TXT.
 5. Activate the workflow only after the test succeeds.
 

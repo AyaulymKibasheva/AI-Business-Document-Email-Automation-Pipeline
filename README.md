@@ -41,6 +41,8 @@ tests/        Automated tests
   (stage 16)
 - Rotating application logs and bounded exponential retries for transient local
   AI failures, with per-document batch isolation (stage 17)
+- Docker image and Compose stack for FastAPI, MySQL, and n8n with persistent
+  volumes and health-based startup ordering (stage 18)
 
 ## Run
 
@@ -156,6 +158,35 @@ retried three times with exponential delays (`1s`, `2s`) by default. Configure
 this with `AI_MAX_ATTEMPTS` and `AI_RETRY_BASE_SECONDS`. Empty or invalid model
 output is treated as a data error and is not retried. A failed document remains
 isolated and does not stop the rest of a batch.
+
+### Docker Compose
+
+Install Docker Desktop, copy `.env.docker.example` to `.env.docker`, replace all
+`change_me` values, and keep the existing local `.env` for Gmail/Ollama settings.
+Then run:
+
+```bash
+docker compose --env-file .env.docker up --build -d
+docker compose --env-file .env.docker ps
+```
+
+Open FastAPI docs at `http://localhost:8016/docs` and n8n at
+`http://localhost:5678`. MySQL is exposed on host port `3307` so it does not
+conflict with an existing local MySQL on `3306`. Inside Compose, n8n reaches the
+API at `http://api:8000`, while the API reaches the Windows Ollama service at
+`http://host.docker.internal:11434`.
+
+Import `/home/node/workflows/email-document-pipeline.json` in n8n and configure
+the Gmail IMAP credential. Do not activate both n8n email ingestion and the
+Python `--email` poller for the same inbox.
+
+Stop containers without deleting persistent data:
+
+```bash
+docker compose --env-file .env.docker down
+```
+
+Add `-v` only when you intentionally want to delete MySQL and n8n volumes.
 
 Example output:
 

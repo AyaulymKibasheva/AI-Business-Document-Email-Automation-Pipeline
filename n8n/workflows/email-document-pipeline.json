@@ -35,7 +35,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://host.docker.internal:8000/documents",
+        "url": "http://api:8000/documents",
         "sendBody": true,
         "contentType": "multipart-form-data",
         "bodyParameters": {
