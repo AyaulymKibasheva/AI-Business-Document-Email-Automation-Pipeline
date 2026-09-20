@@ -25,6 +25,8 @@ tests/        Automated tests
 - Strict Pydantic invoice schema and type validation (stage 6)
 - Deterministic Python business-rule validation (stage 7)
 - Processing statuses: `processed`, `needs_review`, and `failed` (stage 8)
+- MySQL persistence for documents, extracted data, runs, and errors (stage 9)
+- Duplicate prevention by SHA-256 hash and invoice identity (stage 10)
 
 ## Run
 
@@ -45,6 +47,7 @@ Copy `.env.example` to `.env`:
 ```env
 OLLAMA_HOST=http://localhost:11434
 OLLAMA_MODEL=qwen2.5:3b
+DATABASE_URL=mysql+pymysql://document_app:change_me@localhost:3306/document_automation?charset=utf8mb4
 ```
 
 The model runs locally. No paid API key is required, and document text is not
@@ -98,6 +101,22 @@ Business rules verify required text, positive totals, supported currencies,
 email format, date order, non-negative amounts, and subtotal/tax arithmetic.
 Missing required data, low confidence, uncertain fields, or failed business
 rules produce `needs_review`. Technical failures produce `failed`.
+
+## Database
+
+The SQLAlchemy schema creates these MySQL tables:
+
+- `documents`
+- `extracted_data`
+- `processing_runs`
+- `errors`
+
+Set `DATABASE_URL` to enable persistence. Database credentials belong only in
+the ignored local `.env`; `.env.example` contains placeholders.
+
+Before AI processing, the pipeline checks the file SHA-256 hash. Before saving
+an invoice, it also checks the `invoice_number + company` pair. A duplicate is
+reported and is not inserted a second time.
 
 ## Test
 
