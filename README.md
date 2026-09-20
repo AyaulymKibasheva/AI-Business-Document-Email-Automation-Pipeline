@@ -21,6 +21,7 @@ tests/        Automated tests
 - Extraction error logging to `logs/app.log`
 - AI classification into invoice, purchase order, receipt, contract, or other
 - Strict Pydantic Structured Output from the OpenAI Responses API (stage 4)
+- Structured invoice field extraction with nullable missing values (stage 5)
 
 ## Run
 
@@ -59,6 +60,20 @@ Document classification:
 
 {
   "document_type": "invoice"
+}
+
+Extracted invoice data:
+
+{
+  "invoice_number": "INV-001",
+  "company_name": "Example Ltd",
+  "invoice_date": "2026-09-15",
+  "due_date": null,
+  "currency": "USD",
+  "subtotal": 1000.0,
+  "tax": 250.0,
+  "total": 1250.0,
+  "email": "billing@example.com"
 }
 ```
 

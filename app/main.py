@@ -3,7 +3,8 @@
 import argparse
 from collections.abc import Sequence
 
-from app.classifier import ClassificationError, classify_document
+from app.classifier import ClassificationError, DocumentCategory, classify_document
+from app.data_extractor import DataExtractionError, extract_invoice_data
 from app.extractor import TextExtractionError, extract_text
 from app.parser import receive_document
 
@@ -47,6 +48,18 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     print("\nDocument classification:\n")
     print(classification.model_dump_json(indent=2))
+
+    if classification.document_type == DocumentCategory.INVOICE:
+        try:
+            invoice = extract_invoice_data(text)
+        except DataExtractionError as error:
+            print(f"Error: {error}")
+            return 1
+
+        print("\nExtracted invoice data:\n")
+        print(invoice.model_dump_json(indent=2))
+    else:
+        print("\n-> structured extraction is not available for this document type yet")
     return 0
 
 
