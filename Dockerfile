@@ -13,6 +13,7 @@ RUN python -m pip install --upgrade pip && \
 RUN addgroup --system app && adduser --system --ingroup app app
 
 COPY --chown=app:app app ./app
+COPY --chown=app:app .streamlit ./.streamlit
 RUN mkdir -p data/api_uploads logs credentials && chown -R app:app /app
 
 USER app

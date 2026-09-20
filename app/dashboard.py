@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pandas as pd
 import streamlit as st
+import altair as alt
 
 from app.database import (
     DatabaseError,
@@ -28,11 +29,35 @@ st.markdown(
       :root { --blue:#1479ff; --navy:#082f64; --ice:#eef7ff; }
       .stApp {
         background: linear-gradient(145deg, #f7fbff 0%, #edf6ff 45%, #f9fcff 100%);
+        color: #12375f;
       }
       [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #071f43 0%, #0b4b91 100%);
+        background: linear-gradient(180deg, #f1f8ff 0%, #d9edff 55%, #c9e5ff 100%);
+        border-right: 1px solid #b9dcff;
       }
-      [data-testid="stSidebar"] * { color: #f4f9ff !important; }
+      [data-testid="stSidebar"] h2,
+      [data-testid="stSidebar"] p,
+      [data-testid="stSidebar"] label,
+      [data-testid="stSidebar"] [data-testid="stCaptionContainer"] {
+        color: #12375f !important;
+      }
+      [data-testid="stSidebar"] [role="group"]:has(input[role="combobox"]) {
+        background: rgba(255,255,255,.94) !important;
+        border: 1px solid #90c9ff !important;
+        border-radius: 12px !important;
+        color: #0a3768 !important;
+        box-shadow: 0 5px 16px rgba(25, 103, 178, .08);
+      }
+      [data-testid="stSidebar"] input[role="combobox"],
+      [data-testid="stSidebar"] input[role="combobox"] + button {
+        background: transparent !important;
+      }
+      [data-testid="stSidebar"] input[role="combobox"],
+      [data-testid="stSidebar"] input[role="combobox"] + button,
+      [data-testid="stSidebar"] input[role="combobox"] + button * {
+        color: #0a3768 !important;
+      }
+      [data-testid="stSidebar"] hr { border-color: #afd5f7; }
       .hero {
         padding: 30px 34px; border-radius: 24px; color: white; margin-bottom: 22px;
         background: linear-gradient(120deg, #073a7a 0%, #1479ff 60%, #56b7ff 100%);
@@ -45,6 +70,7 @@ st.markdown(
         padding: 18px 20px; border-radius: 18px;
         box-shadow: 0 8px 24px rgba(16, 92, 173, .08);
       }
+      [data-testid="stMetricLabel"] { color: #426487 !important; }
       [data-testid="stMetricValue"] { color: #073a7a; }
       .section-title { color:#082f64; font-size:1.2rem; font-weight:750; margin:18px 0 8px; }
       .status-pill {
@@ -56,6 +82,20 @@ st.markdown(
         background:white; font-weight:700;
       }
       div.stButton > button:hover { border-color:#1479ff; color:#1479ff; }
+      [data-testid="stSidebar"] div.stButton > button {
+        min-height: 44px;
+        background: linear-gradient(100deg, #0865d5 0%, #218dff 100%) !important;
+        border: 0 !important;
+        color: #ffffff !important;
+        box-shadow: 0 8px 20px rgba(8, 101, 213, .24);
+      }
+      [data-testid="stSidebar"] div.stButton > button * {
+        color: #ffffff !important;
+      }
+      [data-testid="stSidebar"] div.stButton > button:hover {
+        background: linear-gradient(100deg, #0759bd 0%, #1479ff 100%) !important;
+        box-shadow: 0 10px 24px rgba(8, 101, 213, .32);
+      }
     </style>
     """,
     unsafe_allow_html=True,
@@ -130,15 +170,40 @@ def render() -> None:
         st.markdown('<div class="section-title">Processing health</div>', unsafe_allow_html=True)
         chart_data = pd.DataFrame(
             {
+                "Status": ["Processed", "Needs review", "Failed"],
                 "Documents": [
                     metrics["processed"],
                     metrics["needs_review"],
                     metrics["failed"],
-                ]
-            },
-            index=["Processed", "Needs review", "Failed"],
+                ],
+            }
         )
-        st.bar_chart(chart_data, color="#1479ff", height=260)
+        chart = (
+            alt.Chart(chart_data)
+            .mark_bar(cornerRadiusTopLeft=7, cornerRadiusTopRight=7)
+            .encode(
+                x=alt.X("Status:N", sort=None, title=None, axis=alt.Axis(labelAngle=0)),
+                y=alt.Y("Documents:Q", title=None),
+                color=alt.Color(
+                    "Status:N",
+                    scale=alt.Scale(
+                        domain=["Processed", "Needs review", "Failed"],
+                        range=["#1479ff", "#65b7ff", "#9fcfff"],
+                    ),
+                    legend=None,
+                ),
+                tooltip=["Status:N", "Documents:Q"],
+            )
+            .properties(height=230, background="#ffffff")
+            .configure_view(stroke="#d7eaff", fill="#ffffff", cornerRadius=14)
+            .configure_axis(
+                labelColor="#426487",
+                gridColor="#e5f1fb",
+                tickColor="#beddf7",
+                domain=False,
+            )
+        )
+        st.altair_chart(chart, use_container_width=True)
     with run_col:
         st.markdown('<div class="section-title">Latest activity</div>', unsafe_allow_html=True)
         last_run = metrics["last_processing_run"]
