@@ -29,6 +29,8 @@ tests/        Automated tests
 - Duplicate prevention by SHA-256 hash and invoice identity (stage 10)
 - Batch processing for all supported documents in a folder, with an aggregate
   status summary and per-file failure isolation (stage 11)
+- IMAP email automation that downloads unread PDF, DOCX, and TXT attachments,
+  then sends only the newly downloaded files through the pipeline (stage 12)
 
 ## Run
 
@@ -67,6 +69,21 @@ python -m app.main path/to/documents/
 
 The batch continues when an individual document fails and finishes with a
 summary such as `50 received`, `43 processed`, `5 needs review`, `2 failed`.
+
+### Email automation
+
+Add the IMAP settings from `.env.example` to the ignored local `.env`. Use an
+app password supplied by your email provider rather than your normal account
+password. Then run:
+
+```bash
+python -m app.main --email
+```
+
+Only unread messages are inspected. Supported attachments are saved under
+`data/email_attachments`, processed by the same validation and database
+pipeline, and the source message is marked as read after a supported attachment
+has been downloaded successfully.
 
 Example output:
 

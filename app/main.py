@@ -20,6 +20,7 @@ from app.database import (
 )
 from app.data_extractor import DataExtractionError, extract_invoice_data
 from app.extractor import TextExtractionError, extract_text
+from app.email_reader import EmailConfig, EmailIngestionError, download_unread_attachments
 from app.parser import SUPPORTED_EXTENSIONS, receive_document
 from app.local_ai import DEFAULT_MODEL
 from app.status import ProcessingDecision, assess_invoice, failed, processed
@@ -84,7 +85,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Process one business document or every supported file in a folder."
     )
-    parser.add_argument("path", help="Path to a PDF, DOCX, TXT document, or folder")
+    parser.add_argument(
+        "path", nargs="?", help="Path to a PDF, DOCX, TXT document, or folder"
+    )
+    parser.add_argument(
+        "--email",
+        action="store_true",
+        help="Download unread email attachments and process them",
+    )
     return parser
 
 
@@ -265,16 +273,15 @@ def discover_documents(directory: str | Path) -> list[Path]:
     )
 
 
-def process_batch(directory: str | Path) -> int:
-    """Process all supported files without letting one failure stop the batch."""
+def process_documents(documents: Sequence[Path], *, source: str = "Batch") -> int:
+    """Process paths without letting one document failure stop the group."""
 
-    documents = discover_documents(directory)
     if not documents:
-        print("No supported PDF, DOCX, or TXT documents found.")
+        print("No new supported PDF, DOCX, or TXT documents found.")
         return 1
 
     counts = {"processed": 0, "needs_review": 0, "failed": 0}
-    print(f"Batch processing: {len(documents)} document(s) received")
+    print(f"{source} processing: {len(documents)} document(s) received")
 
     for index, path in enumerate(documents, start=1):
         print(f"\n{'=' * 72}")
@@ -302,8 +309,33 @@ def process_batch(directory: str | Path) -> int:
     return 1 if counts["failed"] else 0
 
 
+def process_batch(directory: str | Path) -> int:
+    """Process all supported files in a directory."""
+
+    return process_documents(discover_documents(directory))
+
+
+def process_email() -> int:
+    """Download new inbox attachments and send them through the pipeline."""
+
+    try:
+        documents = download_unread_attachments(EmailConfig.from_env())
+    except EmailIngestionError as error:
+        print(f"Email error: {error}")
+        return 1
+    return process_documents(documents, source="Email")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.email:
+        if args.path:
+            print("Error: path cannot be combined with --email")
+            return 1
+        return process_email()
+    if not args.path:
+        print("Error: provide a document path or use --email")
+        return 1
     path = Path(args.path).expanduser()
     if path.is_dir():
         return process_batch(path)
