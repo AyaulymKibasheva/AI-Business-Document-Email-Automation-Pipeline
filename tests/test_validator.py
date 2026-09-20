@@ -23,6 +23,8 @@ def valid_extracted_invoice(**overrides: object) -> InvoiceData:
         "tax": 250.0,
         "total": 1250.0,
         "email": "billing@example.com",
+        "confidence": 0.96,
+        "uncertain_fields": [],
     }
     values.update(overrides)
     return InvoiceData.model_validate(values)

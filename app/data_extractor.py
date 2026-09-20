@@ -3,7 +3,7 @@
 import logging
 
 from ollama import Client
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.local_ai import LocalAIError, generate_structured
 
@@ -26,6 +26,8 @@ class InvoiceData(BaseModel):
     tax: float | None
     total: float | None
     email: str | None
+    confidence: float = Field(ge=0, le=1)
+    uncertain_fields: list[str]
 
 
 class DataExtractionError(RuntimeError):
@@ -53,7 +55,8 @@ def extract_invoice_data(
                 "for dates when the source provides an unambiguous date. Use a "
                 "three-letter ISO currency code when identifiable. Return monetary "
                 "values as numbers without currency symbols or thousands separators. "
-                "Return the result as JSON."
+                "Set confidence from 0 to 1 for the overall extraction and list every "
+                "field whose value is uncertain. Return the result as JSON."
             ),
             schema=InvoiceData,
             client=client,

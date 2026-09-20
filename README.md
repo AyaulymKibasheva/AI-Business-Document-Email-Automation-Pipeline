@@ -24,6 +24,7 @@ tests/        Automated tests
 - Structured invoice field extraction with nullable missing values (stage 5)
 - Strict Pydantic invoice schema and type validation (stage 6)
 - Deterministic Python business-rule validation (stage 7)
+- Processing statuses: `processed`, `needs_review`, and `failed` (stage 8)
 
 ## Run
 
@@ -82,15 +83,21 @@ Extracted invoice data:
   "subtotal": 1000.0,
   "tax": 250.0,
   "total": 1250.0,
-  "email": "billing@example.com"
+  "email": "billing@example.com",
+  "confidence": 0.96,
+  "uncertain_fields": []
 }
 
 -> Pydantic schema validation passed
 -> business rules validation passed
+
+Status: processed
 ```
 
 Business rules verify required text, positive totals, supported currencies,
 email format, date order, non-negative amounts, and subtotal/tax arithmetic.
+Missing required data, low confidence, uncertain fields, or failed business
+rules produce `needs_review`. Technical failures produce `failed`.
 
 ## Test
 

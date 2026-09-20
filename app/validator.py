@@ -76,7 +76,9 @@ def validate_invoice_schema(extracted: InvoiceData) -> Invoice:
     try:
         # JSON validation keeps strict typing while allowing ISO date strings,
         # which are the natural JSON representation of calendar dates.
-        return Invoice.model_validate_json(extracted.model_dump_json())
+        return Invoice.model_validate_json(
+            extracted.model_dump_json(exclude={"confidence", "uncertain_fields"})
+        )
     except ValidationError as error:
         details = "; ".join(
             f"{'.'.join(str(part) for part in item['loc'])}: {item['msg']}"

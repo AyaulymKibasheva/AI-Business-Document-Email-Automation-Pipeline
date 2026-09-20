@@ -19,6 +19,8 @@ class ExtractInvoiceDataTests(unittest.TestCase):
             tax=250.0,
             total=1250.0,
             email="billing@example.com",
+            confidence=0.96,
+            uncertain_fields=[],
         )
         client = Mock()
         client.chat.return_value = SimpleNamespace(
@@ -56,6 +58,8 @@ class ExtractInvoiceDataTests(unittest.TestCase):
             tax=None,
             total=None,
             email=None,
+            confidence=0.5,
+            uncertain_fields=["total"],
         )
 
         self.assertIsNone(invoice.total)

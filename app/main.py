@@ -7,11 +7,20 @@ from app.classifier import ClassificationError, DocumentCategory, classify_docum
 from app.data_extractor import DataExtractionError, extract_invoice_data
 from app.extractor import TextExtractionError, extract_text
 from app.parser import receive_document
+from app.status import ProcessingDecision, assess_invoice, failed, processed
 from app.validator import (
     InvoiceSchemaError,
     validate_invoice_business_rules,
     validate_invoice_schema,
 )
+
+
+def print_decision(decision: ProcessingDecision) -> None:
+    """Print a consistent final processing status."""
+
+    print(f"\nStatus: {decision.status.value}")
+    for reason in decision.reasons:
+        print(f"- {reason}")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -29,6 +38,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         document = receive_document(args.file)
     except (FileNotFoundError, ValueError) as error:
         print(f"Error: {error}")
+        print_decision(failed(str(error)))
         return 1
 
     print(document.filename)
@@ -39,6 +49,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         text = extract_text(document)
     except TextExtractionError as error:
         print(f"Error: {error}")
+        print_decision(failed(str(error)))
         return 1
 
     print("-> text extracted")
@@ -49,6 +60,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         classification = classify_document(text)
     except ClassificationError as error:
         print(f"Error: {error}")
+        print_decision(failed(str(error)))
         return 1
 
     print("\nDocument classification:\n")
@@ -59,6 +71,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             invoice = extract_invoice_data(text)
         except DataExtractionError as error:
             print(f"Error: {error}")
+            print_decision(failed(str(error)))
             return 1
 
         print("\nExtracted invoice data:\n")
@@ -67,20 +80,23 @@ def main(argv: Sequence[str] | None = None) -> int:
         try:
             validated_invoice = validate_invoice_schema(invoice)
         except InvoiceSchemaError as error:
-            print(f"Error: {error}")
-            return 1
+            decision = assess_invoice(invoice, schema_error=str(error))
+            print_decision(decision)
+            return 2
 
         print("\n-> Pydantic schema validation passed")
         validation = validate_invoice_business_rules(validated_invoice)
-        if not validation.is_valid:
-            print("-> business rules validation failed")
-            for issue in validation.issues:
-                print(f"   - {issue.field}: {issue.message}")
-            return 1
+        decision = assess_invoice(invoice, business_validation=validation)
+        if decision.status.value == "needs_review":
+            print("-> business rules or confidence review required")
+            print_decision(decision)
+            return 2
 
         print("-> business rules validation passed")
+        print_decision(decision)
     else:
         print("\n-> structured extraction is not available for this document type yet")
+        print_decision(processed())
     return 0
 
 
