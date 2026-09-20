@@ -3,6 +3,7 @@
 import argparse
 from collections.abc import Sequence
 
+from app.classifier import ClassificationError, classify_document
 from app.extractor import TextExtractionError, extract_text
 from app.parser import receive_document
 
@@ -37,6 +38,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     print("-> text extracted")
     print("\nDocument text:\n")
     print(text)
+
+    try:
+        classification = classify_document(text)
+    except ClassificationError as error:
+        print(f"Error: {error}")
+        return 1
+
+    print("\nDocument classification:\n")
+    print(classification.model_dump_json(indent=2))
     return 0
 
 

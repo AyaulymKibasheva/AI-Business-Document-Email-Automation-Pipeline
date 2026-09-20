@@ -3,6 +3,7 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
+.idea/
 
 # Runtime files
 data/*
@@ -11,4 +12,5 @@ logs/*
 !logs/.gitkeep
 
 # Local secrets (the current placeholder is safe; add real values locally only)
+.env
 .env.local

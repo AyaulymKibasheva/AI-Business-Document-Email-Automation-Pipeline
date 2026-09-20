@@ -19,6 +19,8 @@ tests/        Automated tests
 - File existence and supported-type validation
 - Plain-text extraction from PDF, DOCX, and TXT files (stage 3)
 - Extraction error logging to `logs/app.log`
+- AI classification into invoice, purchase order, receipt, contract, or other
+- Strict Pydantic Structured Output from the OpenAI Responses API (stage 4)
 
 ## Run
 
@@ -27,6 +29,15 @@ Python 3.10 or newer is required. Install the dependencies first:
 ```bash
 python -m pip install -r requirements.txt
 ```
+
+Copy `.env.example` to `.env` and add your OpenAI API key:
+
+```env
+OPENAI_API_KEY=your_api_key_here
+OPENAI_MODEL=gpt-5.6-terra
+```
+
+The `.env` file is ignored by Git and must never be committed.
 
 ```bash
 python -m app.main path/to/invoice.pdf
@@ -43,6 +54,12 @@ invoice.pdf
 Document text:
 
 Invoice INV-001
+
+Document classification:
+
+{
+  "document_type": "invoice"
+}
 ```
 
 ## Test
