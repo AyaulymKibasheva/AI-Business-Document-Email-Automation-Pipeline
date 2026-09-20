@@ -35,6 +35,8 @@ tests/        Automated tests
   (stage 13)
 - Gmail SMTP notifications for processed invoices and documents requiring
   manual review (stage 14)
+- Importable n8n email-to-API workflow with attachment filtering and review
+  routing (stage 15)
 
 ## Run
 
@@ -111,6 +113,14 @@ invoice is saved. For Gmail, the stage 12 username and app password are reused
 automatically, and the notification goes back to that account by default. Set
 the optional `SMTP_*` and `NOTIFICATION_EMAIL_TO` variables from `.env.example`
 to use a different sender or recipient.
+
+### n8n workflow
+
+Import `n8n/workflows/email-document-pipeline.json` into n8n. It receives Gmail
+messages through IMAP, keeps PDF/DOCX/TXT attachments, and uploads each file to
+the Python `POST /documents` endpoint. The workflow is intentionally inactive
+until stage 16 adds that API. See `n8n/README.md` for setup and duplicate-ingestion
+guidance.
 
 Example output:
 
