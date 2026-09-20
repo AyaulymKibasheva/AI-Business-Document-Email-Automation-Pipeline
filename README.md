@@ -22,6 +22,8 @@ tests/        Automated tests
 - AI classification into invoice, purchase order, receipt, contract, or other
 - Free local AI classification with Ollama and Pydantic Structured Outputs (stage 4)
 - Structured invoice field extraction with nullable missing values (stage 5)
+- Strict Pydantic invoice schema and type validation (stage 6)
+- Deterministic Python business-rule validation (stage 7)
 
 ## Run
 
@@ -82,7 +84,13 @@ Extracted invoice data:
   "total": 1250.0,
   "email": "billing@example.com"
 }
+
+-> Pydantic schema validation passed
+-> business rules validation passed
 ```
+
+Business rules verify required text, positive totals, supported currencies,
+email format, date order, non-negative amounts, and subtotal/tax arithmetic.
 
 ## Test
 

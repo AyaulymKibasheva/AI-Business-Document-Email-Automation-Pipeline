@@ -7,6 +7,11 @@ from app.classifier import ClassificationError, DocumentCategory, classify_docum
 from app.data_extractor import DataExtractionError, extract_invoice_data
 from app.extractor import TextExtractionError, extract_text
 from app.parser import receive_document
+from app.validator import (
+    InvoiceSchemaError,
+    validate_invoice_business_rules,
+    validate_invoice_schema,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -58,6 +63,22 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         print("\nExtracted invoice data:\n")
         print(invoice.model_dump_json(indent=2))
+
+        try:
+            validated_invoice = validate_invoice_schema(invoice)
+        except InvoiceSchemaError as error:
+            print(f"Error: {error}")
+            return 1
+
+        print("\n-> Pydantic schema validation passed")
+        validation = validate_invoice_business_rules(validated_invoice)
+        if not validation.is_valid:
+            print("-> business rules validation failed")
+            for issue in validation.issues:
+                print(f"   - {issue.field}: {issue.message}")
+            return 1
+
+        print("-> business rules validation passed")
     else:
         print("\n-> structured extraction is not available for this document type yet")
     return 0
